@@ -21,7 +21,11 @@ class ForecastingModels:
     def __init__(self, data, target_asset="TSLA"):
         self.data = data
         self.target_asset = target_asset
-        self.target_series = data[target_asset]
+        # Extract Close price series for the target asset
+        if isinstance(data[target_asset], pd.DataFrame):
+            self.target_series = data[target_asset]['Close']
+        else:
+            self.target_series = data[target_asset]
         self.scaler = MinMaxScaler()
         self.arima_model = None
         self.lstm_model = None
@@ -246,27 +250,24 @@ class ForecastingModels:
 
         # Split data for evaluation
         train_size = int(0.8 * len(self.target_series))
-        train_data = self.target_series[:train_size]
-        test_data = self.target_series[train_size:]
+        train_data = self.target_series.iloc[:train_size]
+        test_data = self.target_series.iloc[train_size:]
 
         try:
             # ARIMA evaluation
-            # arima_model = ARIMA(train_data, order=(0, 1, 1)).fit()
-            arima_pred = self.arima_model.forecast(len(test_data))
-
-            # Check for NaN values
-            if np.isnan(arima_pred).any():
-                raise ValueError("ARIMA model produced NaN values")
+            arima_model = ARIMA(train_data, order=(0, 1, 1)).fit()
+            arima_pred = arima_model.forecast(len(test_data))
 
             results["arima_mae"] = np.mean(np.abs(test_data - arima_pred))
             results["arima_rmse"] = np.sqrt(np.mean((test_data - arima_pred) ** 2))
-            results["arima_model"] = self.arima_model
+            results["arima_model"] = arima_model
         except Exception as e:
-            results["arima_error"] = str(e)
             # Use simple baseline prediction
-            baseline_pred = np.full(len(test_data), train_data.iloc[-1])
-            results["arima_mae"] = np.mean(np.abs(test_data - baseline_pred))
-            results["arima_rmse"] = np.sqrt(np.mean((test_data - baseline_pred) ** 2))
+            baseline_value = train_data.iloc[-1]
+            baseline_pred = np.full(len(test_data), baseline_value)
+            results["arima_mae"] = np.mean(np.abs(test_data.values - baseline_pred))
+            results["arima_rmse"] = np.sqrt(np.mean((test_data.values - baseline_pred) ** 2))
+            results["arima_model"] = None
 
         try:
             # LSTM evaluation
