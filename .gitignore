@@ -144,10 +144,7 @@ cython_debug/
 # Project specific
 data/*.csv
 data/*.json
-results/*.png
-results/*.json
-results/*.csv
-!results/.gitkeep
+
 reports/*.md
 reports/*.pdf
 

@@ -1,0 +1,22 @@
+{
+  "optimal_weights":{
+    "0":{
+      "TSLA":0.336923964,
+      "BND":0.0,
+      "SPY":0.663076036
+    }
+  },
+  "portfolio_metrics":{
+    "0":{
+      "expected_return":0.2636324157,
+      "volatility":0.2723731817,
+      "sharpe_ratio":0.8944801916
+    }
+  },
+  "forecast_summary":{
+    "0":{
+      "forecast_mean":188.0185622276,
+      "forecast_std":0.0
+    }
+  }
+}
