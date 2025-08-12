@@ -20,16 +20,26 @@ class EDAAnalysis:
         data (pd.DataFrame): Raw financial data
     """
     
-    def __init__(self):
+    def __init__(self, processed_data=None):
         """
-        Initialize EDAAnalysis with data loader and fetch data.
+        Initialize EDAAnalysis with processed data or fetch new data.
+        
+        Args:
+            processed_data (dict, optional): Pre-processed data dictionary
         
         Raises:
             ConnectionError: If data fetching fails
         """
         try:
-            self.loader = DataLoader()
-            self.data = self.loader.fetch_data()
+            if processed_data is not None:
+                self.processed_data = processed_data
+                # Extract raw data from processed data for compatibility
+                self.loader = DataLoader()
+                self.data = self.loader.fetch_data()
+            else:
+                self.loader = DataLoader()
+                self.data = self.loader.fetch_data()
+                self.processed_data = None
             logger.info("EDAAnalysis initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize EDAAnalysis: {e}")
@@ -40,26 +50,27 @@ class EDAAnalysis:
         Calculate basic statistics for the daily returns of the stock data.
         
         Returns:
-            pd.DataFrame: A DataFrame containing comprehensive statistics including
-                         mean, std, variance, skewness, and kurtosis
-                         
-        Raises:
-            ValueError: If data is insufficient for statistical calculations
+            pd.DataFrame: A DataFrame containing comprehensive statistics
         """
         try:
-            daily_return, _ = self.loader.calculate(self.data)
+            if self.processed_data:
+                # Use processed data if available
+                returns_data = {}
+                for ticker, data in self.processed_data.items():
+                    if 'Daily_Return' in data.columns:
+                        returns_data[ticker] = data['Daily_Return']
+                daily_return = pd.DataFrame(returns_data).dropna()
+            else:
+                daily_return, _ = self.loader.calculate(self.data)
             
             if daily_return.empty:
-                raise ValueError("No return data available for statistical analysis")
+                raise ValueError("No return data available")
             
             stats = daily_return.describe().T[['count','mean', 'std', 'min', 'max']]
+            stats['Variance'] = daily_return.var()
+            stats['Skewness'] = daily_return.skew()
+            stats['Kurtosis'] = daily_return.kurtosis()
             
-            # Add additional statistical descriptions   
-            stats['Variance'] = daily_return.var() # Variance used to measure the dispersion of returns
-            stats['Skewness'] = daily_return.skew() # Skewness used to measure the asymmetry of the distribution
-            stats['Kurtosis'] = daily_return.kurtosis() # Kurtosis used to measure the "tailedness" of the distribution
-            
-            logger.info("Basic statistics calculated successfully")
             return stats
             
         except Exception as e:
@@ -181,7 +192,7 @@ class EDAAnalysis:
             logger.error(f"Error plotting volatility: {e}")
             raise
 
-    def test_stationarity(self, column='Close', alpha=0.05):
+    def stationarity_test(self, column='Close', alpha=0.05):
         """
         Perform Augmented Dickey-Fuller test for each ticker's time series.
         
@@ -264,10 +275,11 @@ class EDAAnalysis:
             var_95 = np.percentile(returns, 5)
             
             # Calculate annualized Sharpe Ratio (assuming risk-free rate = 0)
-            if returns.std() == 0:
+            std_val = returns.std()
+            if std_val == 0:
                 sharpe_ratio = 0
             else:
-                sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252)
+                sharpe_ratio = returns.mean() / std_val * np.sqrt(252)
             
             logger.info(f"Risk metrics calculated for {ticker}")
             return {'VaR_95': var_95, 'Sharpe_Ratio': sharpe_ratio}
