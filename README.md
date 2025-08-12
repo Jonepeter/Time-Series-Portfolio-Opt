@@ -45,23 +45,27 @@ Time-Series-Portfolio-Opt/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Python 3.8+
 - pip package manager
 
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd Time-Series-Portfolio-Opt
    ```
 
 2. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 3. **Run the main application**
+
    ```bash
    python src/main.py
    ```
