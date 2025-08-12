@@ -75,6 +75,7 @@ jupyter notebook notebooks/
 ## 📊 Usage
 
 ### Command Line Interface
+
 ```bash
 # Run complete pipeline
 python src/main.py
@@ -86,6 +87,7 @@ python src/portfolio_optimizer.py # Optimization only
 ```
 
 ### Programmatic Usage
+
 ```python
 from src.data_loader import DataLoader
 from src.forecasting_models import LSTMForecaster
@@ -135,11 +137,32 @@ The system generates comprehensive outputs including:
 ## 🧪 Testing
 
 ```bash
-# Run all tests
-python -m pytest tests/
+# Run all tests with coverage
+python -m pytest tests/ -v --cov=src
 
 # Run specific test
 python -m pytest tests/test_data_loader.py
+
+# Run automated test suite
+python run_tests.py
+
+# Performance monitoring
+python scripts/performance_monitor.py
+```
+
+## 🔧 Development
+
+```bash
+# Code formatting
+python -m black src/ tests/
+python -m isort src/ tests/
+
+# Linting
+python -m flake8 src/ tests/
+
+# Environment setup
+cp .env.example .env
+# Edit .env with your settings
 ```
 
 ## 📝 License
