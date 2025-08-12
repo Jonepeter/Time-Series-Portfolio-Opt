@@ -120,6 +120,11 @@ class DataLoader:
             if daily_return.empty:
                 raise ValueError("Unable to calculate returns - insufficient data")
             
+            # Check for infinite or NaN values
+            if daily_return.isnull().any().any() or np.isinf(daily_return).any().any():
+                logger.warning("Found NaN or infinite values in returns, cleaning data")
+                daily_return = daily_return.replace([np.inf, -np.inf], np.nan).dropna()
+            
             # Compute 30-day rolling standard deviation (volatility) of those returns
             volatility = daily_return.rolling(window=30).std()
             
@@ -128,4 +133,75 @@ class DataLoader:
             
         except Exception as e:
             logger.error(f"Error calculating returns and volatility: {e}")
+            raise
+    
+    def preprocess_data(self, raw_data):
+        """
+        Preprocess raw data by calculating returns and volatility for each ticker.
+        
+        Args:
+            raw_data (pd.DataFrame): Raw price data from yfinance
+            
+        Returns:
+            dict: Dictionary with ticker as key and processed DataFrame as value
+        """
+        try:
+            processed_data = {}
+            
+            for ticker in self.tickers:
+                if ticker not in raw_data.columns.get_level_values(1):
+                    logger.warning(f"Ticker {ticker} not found in data")
+                    continue
+                
+                # Extract data for this ticker
+                ticker_data = raw_data.xs(ticker, level=1, axis=1)
+                
+                # Calculate returns and volatility
+                daily_return, volatility = self.calculate(ticker_data)
+                
+                # Create processed DataFrame
+                processed_df = ticker_data.copy()
+                processed_df['Daily_Return'] = daily_return
+                processed_df['Volatility'] = volatility
+                
+                processed_data[ticker] = processed_df
+                
+            logger.info(f"Successfully preprocessed data for {len(processed_data)} tickers")
+            return processed_data
+            
+        except Exception as e:
+            logger.error(f"Error preprocessing data: {e}")
+            raise
+    
+    def get_combined_returns(self, processed_data):
+        """
+        Combine daily returns from all tickers into a single DataFrame.
+        
+        Args:
+            processed_data (dict): Dictionary of processed DataFrames
+            
+        Returns:
+            pd.DataFrame: Combined returns DataFrame
+        """
+        try:
+            returns_dict = {}
+            
+            for ticker, data in processed_data.items():
+                if 'Daily_Return' not in data.columns:
+                    logger.warning(f"Daily_Return not found for {ticker}")
+                    continue
+                    
+                returns_dict[ticker] = data['Daily_Return']
+            
+            if not returns_dict:
+                raise ValueError("No valid return data found")
+            
+            combined_returns = pd.DataFrame(returns_dict)
+            combined_returns = combined_returns.dropna()
+            
+            logger.info(f"Combined returns shape: {combined_returns.shape}")
+            return combined_returns
+            
+        except Exception as e:
+            logger.error(f"Error combining returns: {e}")
             raise
